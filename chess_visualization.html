@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess AI Visualization</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .game-layout {
+            display: grid;
+            grid-template-columns: 1fr 600px;
+            gap: 30px;
+        }
+        .board-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, 70px);
+            grid-template-rows: repeat(8, 70px);
+            border: 3px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        .square {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 45px;
+            position: relative;
+        }
+        .square.light { background-color: #f0d9b5; }
+        .square.dark { background-color: #b58863; }
+        .square.highlight { background-color: #baca44 !important; }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .info-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+        }
+        .status-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .stats {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+        .stat-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .eval-bar {
+            height: 30px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+            position: relative;
+        }
+        .eval-fill {
+            height: 100%;
+            background: white;
+            transition: width 0.3s;
+        }
+        .eval-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #888;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .moves-list {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .move-item {
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .move-item:hover {
+            background: #f0f0f0;
+        }
+        .move-item.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .result-banner {
+            background: #4CAF50;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Chess Neural Network Visualization</h1>
+        <p class="subtitle">Watch your AI play move by move</p>
+        
+        <div class="game-layout">
+            <div class="board-section">
+                <div id="chessboard" class="chessboard"></div>
+                <div class="controls">
+                    <button onclick="firstMove()">⏮️ First</button>
+                    <button onclick="prevMove()">⏪ Previous</button>
+                    <button onclick="nextMove()">⏩ Next</button>
+                    <button onclick="lastMove()">⏭️ Last</button>
+                    <button onclick="autoPlay()">▶️ Auto Play</button>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <div class="status-box">
+                    <div style="font-size: 1.5em; margin-bottom: 10px;" id="statusText">
+                        Move 0
+                    </div>
+                    <div id="turnText">White to move</div>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-row">
+                        <span class="stat-label">Current Move:</span>
+                        <span class="stat-value" id="currentMove">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Evaluation:</span>
+                        <span class="stat-value" id="evaluation">0.00</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Thinking Time:</span>
+                        <span class="stat-value" id="thinkTime">-</span>
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <strong>Evaluation Bar:</strong>
+                        <div class="eval-bar">
+                            <div class="eval-fill" id="evalFill"></div>
+                            <div class="eval-text" id="evalText">0.00</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="moves-list">
+                    <h3 style="margin-bottom: 15px;">📜 Move History</h3>
+                    <div id="movesList"></div>
+                </div>
+                
+                <div class="result-banner" id="resultBanner" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const gameData = {"moves": [{"move": "b2b3", "san": "b3", "player": "White AI", "move_number": 1, "turn": "white"}, {"move": "e7e6", "san": "e6", "player": "Black AI", "move_number": 2, "turn": "black"}, {"move": "a2a3", "san": "a3", "player": "White AI", "move_number": 3, "turn": "white"}, {"move": "b8c6", "san": "Nc6", "player": "Black AI", "move_number": 4, "turn": "black"}, {"move": "e2e3", "san": "e3", "player": "White AI", "move_number": 5, "turn": "white"}, {"move": "f8c5", "san": "Bc5", "player": "Black AI", "move_number": 6, "turn": "black"}, {"move": "f1e2", "san": "Be2", "player": "White AI", "move_number": 7, "turn": "white"}, {"move": "c5b6", "san": "Bb6", "player": "Black AI", "move_number": 8, "turn": "black"}, {"move": "e2g4", "san": "Bg4", "player": "White AI", "move_number": 9, "turn": "white"}, {"move": "c6a5", "san": "Na5", "player": "Black AI", "move_number": 10, "turn": "black"}, {"move": "b1c3", "san": "Nc3", "player": "White AI", "move_number": 11, "turn": "white"}, {"move": "d8h4", "san": "Qh4", "player": "Black AI", "move_number": 12, "turn": "black"}, {"move": "g4f3", "san": "Bf3", "player": "White AI", "move_number": 13, "turn": "white"}, {"move": "h7h5", "san": "h5", "player": "Black AI", "move_number": 14, "turn": "black"}, {"move": "c1b2", "san": "Bb2", "player": "White AI", "move_number": 15, "turn": "white"}, {"move": "h4e4", "san": "Qe4", "player": "Black AI", "move_number": 16, "turn": "black"}, {"move": "c3b1", "san": "Nb1", "player": "White AI", "move_number": 17, "turn": "white"}, {"move": "e4g4", "san": "Qg4", "player": "Black AI", "move_number": 18, "turn": "black"}, {"move": "c2c4", "san": "c4", "player": "White AI", "move_number": 19, "turn": "white"}, {"move": "g8f6", "san": "Nf6", "player": "Black AI", "move_number": 20, "turn": "black"}, {"move": "g1h3", "san": "Nh3", "player": "White AI", "move_number": 21, "turn": "white"}, {"move": "f6h7", "san": "Nh7", "player": "Black AI", "move_number": 22, "turn": "black"}, {"move": "d2d3", "san": "d3", "player": "White AI", "move_number": 23, "turn": "white"}, {"move": "a5b3", "san": "Nxb3", "player": "Black AI", "move_number": 24, "turn": "black"}, {"move": "e1f1", "san": "Kf1", "player": "White AI", "move_number": 25, "turn": "white"}, {"move": "h8f8", "san": "Rf8", "player": "Black AI", "move_number": 26, "turn": "black"}, {"move": "d1e2", "san": "Qe2", "player": "White AI", "move_number": 27, "turn": "white"}, {"move": "b6a5", "san": "Ba5", "player": "Black AI", "move_number": 28, "turn": "black"}, {"move": "f1g1", "san": "Kg1", "player": "White AI", "move_number": 29, "turn": "white"}, {"move": "g4g5", "san": "Qg5", "player": "Black AI", "move_number": 30, "turn": "black"}, {"move": "f3c6", "san": "Bc6", "player": "White AI", "move_number": 31, "turn": "white"}, {"move": "g7g6", "san": "g6", "player": "Black AI", "move_number": 32, "turn": "black"}, {"move": "d3d4", "san": "d4", "player": "White AI", "move_number": 33, "turn": "white"}, {"move": "g5f4", "san": "Qf4", "player": "Black AI", "move_number": 34, "turn": "black"}, {"move": "b1d2", "san": "Nd2", "player": "White AI", "move_number": 35, "turn": "white"}, {"move": "a5b6", "san": "Bb6", "player": "Black AI", "move_number": 36, "turn": "black"}, {"move": "e2f3", "san": "Qf3", "player": "White AI", "move_number": 37, "turn": "white"}, {"move": "e8e7", "san": "Ke7", "player": "Black AI", "move_number": 38, "turn": "black"}, {"move": "c6d5", "san": "Bd5", "player": "White AI", "move_number": 39, "turn": "white"}, {"move": "f4g5", "san": "Qg5", "player": "Black AI", "move_number": 40, "turn": "black"}, {"move": "d5e4", "san": "Be4", "player": "White AI", "move_number": 41, "turn": "white"}, {"move": "f7f5", "san": "f5", "player": "Black AI", "move_number": 42, "turn": "black"}, {"move": "a1b1", "san": "Rb1", "player": "White AI", "move_number": 43, "turn": "white"}, {"move": "h5h4", "san": "h4", "player": "Black AI", "move_number": 44, "turn": "black"}, {"move": "b1f1", "san": "Rf1", "player": "White AI", "move_number": 45, "turn": "white"}, {"move": "d7d5", "san": "d5", "player": "Black AI", "move_number": 46, "turn": "black"}, {"move": "f1e1", "san": "Re1", "player": "White AI", "move_number": 47, "turn": "white"}, {"move": "e6e5", "san": "e5", "player": "Black AI", "move_number": 48, "turn": "black"}, {"move": "e1a1", "san": "Ra1", "player": "White AI", "move_number": 49, "turn": "white"}, {"move": "e7d6", "san": "Kd6", "player": "Black AI", "move_number": 50, "turn": "black"}, {"move": "e4c2", "san": "Bc2", "player": "White AI", "move_number": 51, "turn": "white"}, {"move": "g5g3", "san": "Qg3", "player": "Black AI", "move_number": 52, "turn": "black"}, {"move": "h3g5", "san": "Ng5", "player": "White AI", "move_number": 53, "turn": "white"}, {"move": "a7a6", "san": "a6", "player": "Black AI", "move_number": 54, "turn": "black"}, {"move": "g5h7", "san": "Nxh7", "player": "White AI", "move_number": 55, "turn": "white"}, {"move": "f8d8", "san": "Rd8", "player": "Black AI", "move_number": 56, "turn": "black"}, {"move": "a3a4", "san": "a4", "player": "White AI", "move_number": 57, "turn": "white"}, {"move": "b3c5", "san": "Nc5", "player": "Black AI", "move_number": 58, "turn": "black"}, {"move": "h7f8", "san": "Nf8", "player": "White AI", "move_number": 59, "turn": "white"}, {"move": "h4h3", "san": "h3", "player": "Black AI", "move_number": 60, "turn": "black"}, {"move": "d2b3", "san": "Nb3", "player": "White AI", "move_number": 61, "turn": "white"}, {"move": "c5d7", "san": "Nd7", "player": "Black AI", "move_number": 62, "turn": "black"}, {"move": "f3d5", "san": "Qxd5+", "player": "White AI", "move_number": 63, "turn": "white"}, {"move": "d6e7", "san": "Ke7", "player": "Black AI", "move_number": 64, "turn": "black"}, {"move": "b2c1", "san": "Bc1", "player": "White AI", "move_number": 65, "turn": "white"}, {"move": "g3f4", "san": "Qf4", "player": "Black AI", "move_number": 66, "turn": "black"}, {"move": "b3d2", "san": "Nd2", "player": "White AI", "move_number": 67, "turn": "white"}, {"move": "f4h2", "san": "Qxh2+", "player": "Black AI", "move_number": 68, "turn": "black"}, {"move": "h1h2", "san": "Rxh2", "player": "White AI", "move_number": 69, "turn": "white"}, {"move": "g6g5", "san": "g5", "player": "Black AI", "move_number": 70, "turn": "black"}, {"move": "g2g3", "san": "g3", "player": "White AI", "move_number": 71, "turn": "white"}, {"move": "a8b8", "san": "Rb8", "player": "Black AI", "move_number": 72, "turn": "black"}, {"move": "d2e4", "san": "Ne4", "player": "White AI", "move_number": 73, "turn": "white"}, {"move": "b6d4", "san": "Bxd4", "player": "Black AI", "move_number": 74, "turn": "black"}, {"move": "g1f1", "san": "Kf1", "player": "White AI", "move_number": 75, "turn": "white"}, {"move": "d4c3", "san": "Bc3", "player": "Black AI", "move_number": 76, "turn": "black"}, {"move": "e4d6", "san": "Nd6", "player": "White AI", "move_number": 77, "turn": "white"}, {"move": "g5g4", "san": "g4", "player": "Black AI", "move_number": 78, "turn": "black"}, {"move": "f8g6", "san": "Ng6+", "player": "White AI", "move_number": 79, "turn": "white"}, {"move": "e7f6", "san": "Kf6", "player": "Black AI", "move_number": 80, "turn": "black"}, {"move": "a1a3", "san": "Ra3", "player": "White AI", "move_number": 81, "turn": "white"}, {"move": "d8f8", "san": "Rf8", "player": "Black AI", "move_number": 82, "turn": "black"}, {"move": "d5h1", "san": "Qh1", "player": "White AI", "move_number": 83, "turn": "white"}, {"move": "d7c5", "san": "Nc5", "player": "Black AI", "move_number": 84, "turn": "black"}, {"move": "c2b1", "san": "Bb1", "player": "White AI", "move_number": 85, "turn": "white"}, {"move": "c5b3", "san": "Nb3", "player": "Black AI", "move_number": 86, "turn": "black"}, {"move": "h1c6", "san": "Qc6", "player": "White AI", "move_number": 87, "turn": "white"}, {"move": "c3b4", "san": "Bb4", "player": "Black AI", "move_number": 88, "turn": "black"}, {"move": "d6b5", "san": "Nb5+", "player": "White AI", "move_number": 89, "turn": "white"}, {"move": "c8e6", "san": "Be6", "player": "Black AI", "move_number": 90, "turn": "black"}, {"move": "c6d7", "san": "Qd7", "player": "White AI", "move_number": 91, "turn": "white"}, {"move": "b3c1", "san": "Nxc1", "player": "Black AI", "move_number": 92, "turn": "black"}, {"move": "d7d1", "san": "Qd1", "player": "White AI", "move_number": 93, "turn": "white"}, {"move": "f6g6", "san": "Kxg6", "player": "Black AI", "move_number": 94, "turn": "black"}, {"move": "f1g1", "san": "Kg1", "player": "White AI", "move_number": 95, "turn": "white"}, {"move": "g6h5", "san": "Kh5", "player": "Black AI", "move_number": 96, "turn": "black"}, {"move": "d1d3", "san": "Qd3", "player": "White AI", "move_number": 97, "turn": "white"}, {"move": "c1e2", "san": "Ne2+", "player": "Black AI", "move_number": 98, "turn": "black"}, {"move": "g1f1", "san": "Kf1", "player": "White AI", "move_number": 99, "turn": "white"}, {"move": "e2g1", "san": "Ng1", "player": "Black AI", "move_number": 100, "turn": "black"}], "positions": ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "rnbqkbnr/pppppppp/8/8/8/1P6/P1PPPPPP/RNBQKBNR b KQkq - 0 1", "rnbqkbnr/pppp1ppp/4p3/8/8/1P6/P1PPPPPP/RNBQKBNR w KQkq - 0 2", "rnbqkbnr/pppp1ppp/4p3/8/8/PP6/2PPPPPP/RNBQKBNR b KQkq - 0 2", "r1bqkbnr/pppp1ppp/2n1p3/8/8/PP6/2PPPPPP/RNBQKBNR w KQkq - 1 3", "r1bqkbnr/pppp1ppp/2n1p3/8/8/PP2P3/2PP1PPP/RNBQKBNR b KQkq - 0 3", "r1bqk1nr/pppp1ppp/2n1p3/2b5/8/PP2P3/2PP1PPP/RNBQKBNR w KQkq - 1 4", "r1bqk1nr/pppp1ppp/2n1p3/2b5/8/PP2P3/2PPBPPP/RNBQK1NR b KQkq - 2 4", "r1bqk1nr/pppp1ppp/1bn1p3/8/8/PP2P3/2PPBPPP/RNBQK1NR w KQkq - 3 5", "r1bqk1nr/pppp1ppp/1bn1p3/8/6B1/PP2P3/2PP1PPP/RNBQK1NR b KQkq - 4 5", "r1bqk1nr/pppp1ppp/1b2p3/n7/6B1/PP2P3/2PP1PPP/RNBQK1NR w KQkq - 5 6", "r1bqk1nr/pppp1ppp/1b2p3/n7/6B1/PPN1P3/2PP1PPP/R1BQK1NR b KQkq - 6 6", "r1b1k1nr/pppp1ppp/1b2p3/n7/6Bq/PPN1P3/2PP1PPP/R1BQK1NR w KQkq - 7 7", "r1b1k1nr/pppp1ppp/1b2p3/n7/7q/PPN1PB2/2PP1PPP/R1BQK1NR b KQkq - 8 7", "r1b1k1nr/pppp1pp1/1b2p3/n6p/7q/PPN1PB2/2PP1PPP/R1BQK1NR w KQkq - 0 8", "r1b1k1nr/pppp1pp1/1b2p3/n6p/7q/PPN1PB2/1BPP1PPP/R2QK1NR b KQkq - 1 8", "r1b1k1nr/pppp1pp1/1b2p3/n6p/4q3/PPN1PB2/1BPP1PPP/R2QK1NR w KQkq - 2 9", "r1b1k1nr/pppp1pp1/1b2p3/n6p/4q3/PP2PB2/1BPP1PPP/RN1QK1NR b KQkq - 3 9", "r1b1k1nr/pppp1pp1/1b2p3/n6p/6q1/PP2PB2/1BPP1PPP/RN1QK1NR w KQkq - 4 10", "r1b1k1nr/pppp1pp1/1b2p3/n6p/2P3q1/PP2PB2/1B1P1PPP/RN1QK1NR b KQkq - 0 10", "r1b1k2r/pppp1pp1/1b2pn2/n6p/2P3q1/PP2PB2/1B1P1PPP/RN1QK1NR w KQkq - 1 11", "r1b1k2r/pppp1pp1/1b2pn2/n6p/2P3q1/PP2PB1N/1B1P1PPP/RN1QK2R b KQkq - 2 11", "r1b1k2r/pppp1ppn/1b2p3/n6p/2P3q1/PP2PB1N/1B1P1PPP/RN1QK2R w KQkq - 3 12", "r1b1k2r/pppp1ppn/1b2p3/n6p/2P3q1/PP1PPB1N/1B3PPP/RN1QK2R b KQkq - 0 12", "r1b1k2r/pppp1ppn/1b2p3/7p/2P3q1/Pn1PPB1N/1B3PPP/RN1QK2R w KQkq - 0 13", "r1b1k2r/pppp1ppn/1b2p3/7p/2P3q1/Pn1PPB1N/1B3PPP/RN1Q1K1R b kq - 1 13", "r1b1kr2/pppp1ppn/1b2p3/7p/2P3q1/Pn1PPB1N/1B3PPP/RN1Q1K1R w q - 2 14", "r1b1kr2/pppp1ppn/1b2p3/7p/2P3q1/Pn1PPB1N/1B2QPPP/RN3K1R b q - 3 14", "r1b1kr2/pppp1ppn/4p3/b6p/2P3q1/Pn1PPB1N/1B2QPPP/RN3K1R w q - 4 15", "r1b1kr2/pppp1ppn/4p3/b6p/2P3q1/Pn1PPB1N/1B2QPPP/RN4KR b q - 5 15", "r1b1kr2/pppp1ppn/4p3/b5qp/2P5/Pn1PPB1N/1B2QPPP/RN4KR w q - 6 16", "r1b1kr2/pppp1ppn/2B1p3/b5qp/2P5/Pn1PP2N/1B2QPPP/RN4KR b q - 7 16", "r1b1kr2/pppp1p1n/2B1p1p1/b5qp/2P5/Pn1PP2N/1B2QPPP/RN4KR w q - 0 17", "r1b1kr2/pppp1p1n/2B1p1p1/b5qp/2PP4/Pn2P2N/1B2QPPP/RN4KR b q - 0 17", "r1b1kr2/pppp1p1n/2B1p1p1/b6p/2PP1q2/Pn2P2N/1B2QPPP/RN4KR w q - 1 18", "r1b1kr2/pppp1p1n/2B1p1p1/b6p/2PP1q2/Pn2P2N/1B1NQPPP/R5KR b q - 2 18", "r1b1kr2/pppp1p1n/1bB1p1p1/7p/2PP1q2/Pn2P2N/1B1NQPPP/R5KR w q - 3 19", "r1b1kr2/pppp1p1n/1bB1p1p1/7p/2PP1q2/Pn2PQ1N/1B1N1PPP/R5KR b q - 4 19", "r1b2r2/ppppkp1n/1bB1p1p1/7p/2PP1q2/Pn2PQ1N/1B1N1PPP/R5KR w - - 5 20", "r1b2r2/ppppkp1n/1b2p1p1/3B3p/2PP1q2/Pn2PQ1N/1B1N1PPP/R5KR b - - 6 20", "r1b2r2/ppppkp1n/1b2p1p1/3B2qp/2PP4/Pn2PQ1N/1B1N1PPP/R5KR w - - 7 21", "r1b2r2/ppppkp1n/1b2p1p1/6qp/2PPB3/Pn2PQ1N/1B1N1PPP/R5KR b - - 8 21", "r1b2r2/ppppk2n/1b2p1p1/5pqp/2PPB3/Pn2PQ1N/1B1N1PPP/R5KR w - - 0 22", "r1b2r2/ppppk2n/1b2p1p1/5pqp/2PPB3/Pn2PQ1N/1B1N1PPP/1R4KR b - - 1 22", "r1b2r2/ppppk2n/1b2p1p1/5pq1/2PPB2p/Pn2PQ1N/1B1N1PPP/1R4KR w - - 0 23", "r1b2r2/ppppk2n/1b2p1p1/5pq1/2PPB2p/Pn2PQ1N/1B1N1PPP/5RKR b - - 1 23", "r1b2r2/ppp1k2n/1b2p1p1/3p1pq1/2PPB2p/Pn2PQ1N/1B1N1PPP/5RKR w - - 0 24", "r1b2r2/ppp1k2n/1b2p1p1/3p1pq1/2PPB2p/Pn2PQ1N/1B1N1PPP/4R1KR b - - 1 24", "r1b2r2/ppp1k2n/1b4p1/3pppq1/2PPB2p/Pn2PQ1N/1B1N1PPP/4R1KR w - - 0 25", "r1b2r2/ppp1k2n/1b4p1/3pppq1/2PPB2p/Pn2PQ1N/1B1N1PPP/R5KR b - - 1 25", "r1b2r2/ppp4n/1b1k2p1/3pppq1/2PPB2p/Pn2PQ1N/1B1N1PPP/R5KR w - - 2 26", "r1b2r2/ppp4n/1b1k2p1/3pppq1/2PP3p/Pn2PQ1N/1BBN1PPP/R5KR b - - 3 26", "r1b2r2/ppp4n/1b1k2p1/3ppp2/2PP3p/Pn2PQqN/1BBN1PPP/R5KR w - - 4 27", "r1b2r2/ppp4n/1b1k2p1/3pppN1/2PP3p/Pn2PQq1/1BBN1PPP/R5KR b - - 5 27", "r1b2r2/1pp4n/pb1k2p1/3pppN1/2PP3p/Pn2PQq1/1BBN1PPP/R5KR w - - 0 28", "r1b2r2/1pp4N/pb1k2p1/3ppp2/2PP3p/Pn2PQq1/1BBN1PPP/R5KR b - - 0 28", "r1br4/1pp4N/pb1k2p1/3ppp2/2PP3p/Pn2PQq1/1BBN1PPP/R5KR w - - 1 29", "r1br4/1pp4N/pb1k2p1/3ppp2/P1PP3p/1n2PQq1/1BBN1PPP/R5KR b - - 0 29", "r1br4/1pp4N/pb1k2p1/2nppp2/P1PP3p/4PQq1/1BBN1PPP/R5KR w - - 1 30", "r1br1N2/1pp5/pb1k2p1/2nppp2/P1PP3p/4PQq1/1BBN1PPP/R5KR b - - 2 30", "r1br1N2/1pp5/pb1k2p1/2nppp2/P1PP4/4PQqp/1BBN1PPP/R5KR w - - 0 31", "r1br1N2/1pp5/pb1k2p1/2nppp2/P1PP4/1N2PQqp/1BB2PPP/R5KR b - - 1 31", "r1br1N2/1ppn4/pb1k2p1/3ppp2/P1PP4/1N2PQqp/1BB2PPP/R5KR w - - 2 32", "r1br1N2/1ppn4/pb1k2p1/3Qpp2/P1PP4/1N2P1qp/1BB2PPP/R5KR b - - 0 32", "r1br1N2/1ppnk3/pb4p1/3Qpp2/P1PP4/1N2P1qp/1BB2PPP/R5KR w - - 1 33", "r1br1N2/1ppnk3/pb4p1/3Qpp2/P1PP4/1N2P1qp/2B2PPP/R1B3KR b - - 2 33", "r1br1N2/1ppnk3/pb4p1/3Qpp2/P1PP1q2/1N2P2p/2B2PPP/R1B3KR w - - 3 34", "r1br1N2/1ppnk3/pb4p1/3Qpp2/P1PP1q2/4P2p/2BN1PPP/R1B3KR b - - 4 34", "r1br1N2/1ppnk3/pb4p1/3Qpp2/P1PP4/4P2p/2BN1PPq/R1B3KR w - - 0 35", "r1br1N2/1ppnk3/pb4p1/3Qpp2/P1PP4/4P2p/2BN1PPR/R1B3K1 b - - 0 35", "r1br1N2/1ppnk3/pb6/3Qppp1/P1PP4/4P2p/2BN1PPR/R1B3K1 w - - 0 36", "r1br1N2/1ppnk3/pb6/3Qppp1/P1PP4/4P1Pp/2BN1P1R/R1B3K1 b - - 0 36", "1rbr1N2/1ppnk3/pb6/3Qppp1/P1PP4/4P1Pp/2BN1P1R/R1B3K1 w - - 1 37", "1rbr1N2/1ppnk3/pb6/3Qppp1/P1PPN3/4P1Pp/2B2P1R/R1B3K1 b - - 2 37", "1rbr1N2/1ppnk3/p7/3Qppp1/P1PbN3/4P1Pp/2B2P1R/R1B3K1 w - - 0 38", "1rbr1N2/1ppnk3/p7/3Qppp1/P1PbN3/4P1Pp/2B2P1R/R1B2K2 b - - 1 38", "1rbr1N2/1ppnk3/p7/3Qppp1/P1P1N3/2b1P1Pp/2B2P1R/R1B2K2 w - - 2 39", "1rbr1N2/1ppnk3/p2N4/3Qppp1/P1P5/2b1P1Pp/2B2P1R/R1B2K2 b - - 3 39", "1rbr1N2/1ppnk3/p2N4/3Qpp2/P1P3p1/2b1P1Pp/2B2P1R/R1B2K2 w - - 0 40", "1rbr4/1ppnk3/p2N2N1/3Qpp2/P1P3p1/2b1P1Pp/2B2P1R/R1B2K2 b - - 1 40", "1rbr4/1ppn4/p2N1kN1/3Qpp2/P1P3p1/2b1P1Pp/2B2P1R/R1B2K2 w - - 2 41", "1rbr4/1ppn4/p2N1kN1/3Qpp2/P1P3p1/R1b1P1Pp/2B2P1R/2B2K2 b - - 3 41", "1rb2r2/1ppn4/p2N1kN1/3Qpp2/P1P3p1/R1b1P1Pp/2B2P1R/2B2K2 w - - 4 42", "1rb2r2/1ppn4/p2N1kN1/4pp2/P1P3p1/R1b1P1Pp/2B2P1R/2B2K1Q b - - 5 42", "1rb2r2/1pp5/p2N1kN1/2n1pp2/P1P3p1/R1b1P1Pp/2B2P1R/2B2K1Q w - - 6 43", "1rb2r2/1pp5/p2N1kN1/2n1pp2/P1P3p1/R1b1P1Pp/5P1R/1BB2K1Q b - - 7 43", "1rb2r2/1pp5/p2N1kN1/4pp2/P1P3p1/Rnb1P1Pp/5P1R/1BB2K1Q w - - 8 44", "1rb2r2/1pp5/p1QN1kN1/4pp2/P1P3p1/Rnb1P1Pp/5P1R/1BB2K2 b - - 9 44", "1rb2r2/1pp5/p1QN1kN1/4pp2/PbP3p1/Rn2P1Pp/5P1R/1BB2K2 w - - 10 45", "1rb2r2/1pp5/p1Q2kN1/1N2pp2/PbP3p1/Rn2P1Pp/5P1R/1BB2K2 b - - 11 45", "1r3r2/1pp5/p1Q1bkN1/1N2pp2/PbP3p1/Rn2P1Pp/5P1R/1BB2K2 w - - 12 46", "1r3r2/1ppQ4/p3bkN1/1N2pp2/PbP3p1/Rn2P1Pp/5P1R/1BB2K2 b - - 13 46", "1r3r2/1ppQ4/p3bkN1/1N2pp2/PbP3p1/R3P1Pp/5P1R/1Bn2K2 w - - 0 47", "1r3r2/1pp5/p3bkN1/1N2pp2/PbP3p1/R3P1Pp/5P1R/1BnQ1K2 b - - 1 47", "1r3r2/1pp5/p3b1k1/1N2pp2/PbP3p1/R3P1Pp/5P1R/1BnQ1K2 w - - 0 48", "1r3r2/1pp5/p3b1k1/1N2pp2/PbP3p1/R3P1Pp/5P1R/1BnQ2K1 b - - 1 48", "1r3r2/1pp5/p3b3/1N2pp1k/PbP3p1/R3P1Pp/5P1R/1BnQ2K1 w - - 2 49", "1r3r2/1pp5/p3b3/1N2pp1k/PbP3p1/R2QP1Pp/5P1R/1Bn3K1 b - - 3 49", "1r3r2/1pp5/p3b3/1N2pp1k/PbP3p1/R2QP1Pp/4nP1R/1B4K1 w - - 4 50", "1r3r2/1pp5/p3b3/1N2pp1k/PbP3p1/R2QP1Pp/4nP1R/1B3K2 b - - 5 50"], "evaluations": [-0.047, -0.044, -0.048, -0.044, -0.048, -0.044, -0.048, -0.044, -0.047, -0.044, -0.047, -0.044, -0.048, -0.044, -0.047, -0.044, -0.047, -0.044, -0.047, -0.044, -0.046, -0.044, -0.045, -0.044, -0.045, -0.044, -0.044, -0.043, -0.044, -0.043, -0.044, -0.043, -0.044, -0.043, -0.045, -0.043, -0.046, -0.044, -0.045, -0.044, -0.044, -0.044, -0.044, -0.044, -0.045, -0.044, -0.045, -0.044, -0.045, -0.044, -0.045, -0.044, -0.045, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.043, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.044, -0.043, -0.044, -0.044, -0.044, -0.043, -0.044, -0.043, -0.044, -0.043, -0.044], "thinking_times": [0.027, 0.001, 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.001, 0.0, 0.0, 0.001, 0.0, 0.001, 0.001, 0.0, 0.001, 0.001, 0.001, 0.001, 0.0, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.0, 0.0, 0.0, 0.001, 0.001, 0.001, 0.0, 0.0, 0.001, 0.001, 0.001, 0.0, 0.001, 0.001, 0.001, 0.001, 0.0, 0.0, 0.0, 0.001, 0.001, 0.0, 0.0, 0.0, 0.0, 0.001, 0.001, 0.0, 0.0, 0.001, 0.001, 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.0, 0.001, 0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.0, 0.0], "result": "*", "termination": "Max moves reached"};
+        
+        const pieces = {
+            'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+            'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+        };
+        
+        let currentPosition = 0;
+        let autoPlaying = false;
+        
+        function fenToBoard(fen) {
+            const board = [];
+            const rows = fen.split(' ')[0].split('/');
+            
+            for (const row of rows) {
+                const boardRow = [];
+                for (const char of row) {
+                    if (char >= '1' && char <= '8') {
+                        for (let i = 0; i < parseInt(char); i++) {
+                            boardRow.push('');
+                        }
+                    } else {
+                        boardRow.push(char);
+                    }
+                }
+                board.push(boardRow);
+            }
+            return board;
+        }
+        
+        function renderPosition(position) {
+            const fen = position === 0 ? 
+                'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1' : 
+                gameData.positions[position - 1];
+            
+            const board = fenToBoard(fen);
+            const boardElement = document.getElementById('chessboard');
+            boardElement.innerHTML = '';
+            
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('div');
+                    square.className = 'square';
+                    square.className += (row + col) % 2 === 0 ? ' light' : ' dark';
+                    
+                    // Highlight last move
+                    if (position > 0) {
+                        const lastMove = gameData.moves[position - 1];
+                        const move = lastMove.move;
+                        const from = [8 - parseInt(move[1]), move.charCodeAt(0) - 97];
+                        const to = [8 - parseInt(move[3]), move.charCodeAt(2) - 97];
+                        
+                        if ((row === from[0] && col === from[1]) || 
+                            (row === to[0] && col === to[1])) {
+                            square.classList.add('highlight');
+                        }
+                    }
+                    
+                    const piece = board[row][col];
+                    if (piece) {
+                        square.textContent = pieces[piece];
+                    }
+                    
+                    boardElement.appendChild(square);
+                }
+            }
+            
+            updateInfo(position);
+        }
+        
+        function updateInfo(position) {
+            if (position === 0) {
+                document.getElementById('statusText').textContent = 'Starting Position';
+                document.getElementById('turnText').textContent = 'White to move';
+                document.getElementById('currentMove').textContent = '-';
+                document.getElementById('evaluation').textContent = '0.00';
+                document.getElementById('thinkTime').textContent = '-';
+                updateEvalBar(0);
+            } else {
+                const move = gameData.moves[position - 1];
+                const eval = gameData.evaluations[position - 1];
+                const time = gameData.thinking_times[position - 1];
+                
+                document.getElementById('statusText').textContent = 
+                    `Move ${move.move_number}`;
+                document.getElementById('turnText').textContent = 
+                    `${move.player} played ${move.san}`;
+                document.getElementById('currentMove').textContent = move.san;
+                document.getElementById('evaluation').textContent = eval.toFixed(2);
+                document.getElementById('thinkTime').textContent = `${time}s`;
+                updateEvalBar(eval);
+            }
+            
+            // Update moves list
+            const movesList = document.getElementById('movesList');
+            movesList.innerHTML = '';
+            gameData.moves.forEach((move, i) => {
+                const moveItem = document.createElement('div');
+                moveItem.className = 'move-item';
+                if (i + 1 === position) moveItem.classList.add('active');
+                moveItem.textContent = 
+                    `${move.move_number}. ${move.player}: ${move.san} (${gameData.evaluations[i].toFixed(2)})`;
+                moveItem.onclick = () => goToMove(i + 1);
+                movesList.appendChild(moveItem);
+            });
+            
+            // Show result if at end
+            if (position === gameData.moves.length) {
+                document.getElementById('resultBanner').style.display = 'block';
+                document.getElementById('resultBanner').textContent = 
+                    `🏆 Game Over: ${gameData.result} - ${gameData.termination}`;
+            } else {
+                document.getElementById('resultBanner').style.display = 'none';
+            }
+        }
+        
+        function updateEvalBar(eval) {
+            const normalized = Math.max(-1, Math.min(1, eval));
+            const percentage = ((normalized + 1) / 2) * 100;
+            document.getElementById('evalFill').style.width = percentage + '%';
+            document.getElementById('evalText').textContent = eval.toFixed(2);
+        }
+        
+        function firstMove() {
+            currentPosition = 0;
+            renderPosition(currentPosition);
+        }
+        
+        function prevMove() {
+            if (currentPosition > 0) {
+                currentPosition--;
+                renderPosition(currentPosition);
+            }
+        }
+        
+        function nextMove() {
+            if (currentPosition < gameData.moves.length) {
+                currentPosition++;
+                renderPosition(currentPosition);
+            }
+        }
+        
+        function lastMove() {
+            currentPosition = gameData.moves.length;
+            renderPosition(currentPosition);
+        }
+        
+        function goToMove(position) {
+            currentPosition = position;
+            renderPosition(currentPosition);
+        }
+        
+        function autoPlay() {
+            if (autoPlaying) {
+                autoPlaying = false;
+                return;
+            }
+            
+            autoPlaying = true;
+            const playNext = () => {
+                if (autoPlaying && currentPosition < gameData.moves.length) {
+                    nextMove();
+                    setTimeout(playNext, 1500);
+                } else {
+                    autoPlaying = false;
+                }
+            };
+            playNext();
+        }
+        
+        // Initialize
+        renderPosition(0);
+    </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Training outputs
+checkpoints/
+*.pt
+*.log
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+
+# Data
+data/
+

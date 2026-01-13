@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess AI Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .board-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            border: 3px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .square.light {
+            background-color: #f0d9b5;
+        }
+
+        .square.dark {
+            background-color: #b58863;
+        }
+
+        .square.highlight {
+            background-color: #baca44 !important;
+        }
+
+        .square.last-move {
+            background-color: #cdd26a !important;
+        }
+
+        .square:hover {
+            opacity: 0.8;
+        }
+
+        .info-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .status {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stats {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .stat-label {
+            color: #666;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .moves-history {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .moves-history h3 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .move-item {
+            padding: 5px;
+            margin-bottom: 3px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        .move-item:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .ai-thinking {
+            text-align: center;
+            color: #667eea;
+            font-style: italic;
+            padding: 10px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .result {
+            background: #4CAF50;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .game-container {
+                grid-template-columns: 1fr;
+            }
+
+            .chessboard {
+                grid-template-columns: repeat(8, 50px);
+                grid-template-rows: repeat(8, 50px);
+            }
+
+            .square {
+                width: 50px;
+                height: 50px;
+                font-size: 35px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>♟️ Chess AI Visualizer</h1>
+        <p class="subtitle">Watch your neural network play chess in real-time</p>
+
+        <div class="game-container">
+            <div class="board-container">
+                <div id="chessboard" class="chessboard"></div>
+            </div>
+
+            <div class="info-panel">
+                <div class="status" id="status">Ready to start</div>
+
+                <div class="controls">
+                    <button id="startBtn" onclick="startGame()">▶️ Start AI vs AI</button>
+                    <button id="stepBtn" onclick="stepMove()" disabled>⏭️ Next Move</button>
+                    <button id="autoBtn" onclick="toggleAuto()">🔄 Auto Play</button>
+                    <button id="resetBtn" onclick="resetGame()">🔄 Reset Game</button>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-row">
+                        <span class="stat-label">Move:</span>
+                        <span class="stat-value" id="moveCount">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Turn:</span>
+                        <span class="stat-value" id="turn">White</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Material:</span>
+                        <span class="stat-value" id="material">Equal</span>
+                    </div>
+                </div>
+
+                <div class="moves-history">
+                    <h3>📜 Move History</h3>
+                    <div id="movesList"></div>
+                </div>
+
+                <div id="aiThinking" class="ai-thinking" style="display: none;">
+                    🤖 AI is thinking...
+                </div>
+
+                <div id="result" class="result" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple chess logic (simplified for demo)
+        let board = [];
+        let moveHistory = [];
+        let gameOver = false;
+        let autoPlay = false;
+        let lastMove = null;
+
+        const pieces = {
+            'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+            'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+        };
+
+        const startPosition = [
+            ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+            ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+            ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+        ];
+
+        function initBoard() {
+            board = JSON.parse(JSON.stringify(startPosition));
+            moveHistory = [];
+            gameOver = false;
+            lastMove = null;
+            renderBoard();
+            updateStats();
+        }
+
+        function renderBoard() {
+            const boardElement = document.getElementById('chessboard');
+            boardElement.innerHTML = '';
+
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('div');
+                    square.className = 'square';
+                    square.className += (row + col) % 2 === 0 ? ' light' : ' dark';
+                    
+                    if (lastMove && 
+                        ((lastMove.from[0] === row && lastMove.from[1] === col) ||
+                         (lastMove.to[0] === row && lastMove.to[1] === col))) {
+                        square.classList.add('last-move');
+                    }
+
+                    const piece = board[row][col];
+                    if (piece) {
+                        square.textContent = pieces[piece];
+                    }
+
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    boardElement.appendChild(square);
+                }
+            }
+        }
+
+        function getRandomMove() {
+            const moves = [];
+            const isWhiteTurn = moveHistory.length % 2 === 0;
+
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const piece = board[row][col];
+                    if (!piece) continue;
+                    
+                    const isWhitePiece = piece === piece.toUpperCase();
+                    if (isWhitePiece !== isWhiteTurn) continue;
+
+                    // Get possible moves for this piece (simplified)
+                    const possibleMoves = getPossibleMoves(row, col, piece);
+                    moves.push(...possibleMoves.map(to => ({
+                        from: [row, col],
+                        to: to,
+                        piece: piece
+                    })));
+                }
+            }
+
+            if (moves.length === 0) return null;
+            return moves[Math.floor(Math.random() * moves.length)];
+        }
+
+        function getPossibleMoves(row, col, piece) {
+            const moves = [];
+            const type = piece.toLowerCase();
+
+            // Simplified move generation
+            const directions = {
+                'p': piece === 'P' ? [[-1, 0], [-2, 0]] : [[1, 0], [2, 0]],
+                'n': [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]],
+                'b': [[-1,-1],[-1,1],[1,-1],[1,1]],
+                'r': [[-1,0],[1,0],[0,-1],[0,1]],
+                'q': [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]],
+                'k': [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]
+            };
+
+            const dirs = directions[type] || [];
+            
+            for (const [dr, dc] of dirs) {
+                const newRow = row + dr;
+                const newCol = col + dc;
+
+                if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                    const target = board[newRow][newCol];
+                    if (!target || (target.toUpperCase() === target) !== (piece.toUpperCase() === piece)) {
+                        moves.push([newRow, newCol]);
+                    }
+                }
+            }
+
+            return moves;
+        }
+
+        function makeMove(move) {
+            if (!move) return false;
+
+            const [fromRow, fromCol] = move.from;
+            const [toRow, toCol] = move.to;
+
+            const piece = board[fromRow][fromCol];
+            const captured = board[toRow][toCol];
+
+            board[toRow][toCol] = piece;
+            board[fromRow][fromCol] = '';
+
+            lastMove = move;
+            moveHistory.push({
+                move: move,
+                captured: captured,
+                notation: getMoveNotation(move, captured)
+            });
+
+            return true;
+        }
+
+        function getMoveNotation(move, captured) {
+            const files = ['a','b','c','d','e','f','g','h'];
+            const from = files[move.from[1]] + (8 - move.from[0]);
+            const to = files[move.to[1]] + (8 - move.to[0]);
+            const symbol = move.piece.toUpperCase() === 'P' ? '' : move.piece.toUpperCase();
+            const capture = captured ? 'x' : '';
+            return `${symbol}${from}${capture}${to}`;
+        }
+
+        function updateStats() {
+            document.getElementById('moveCount').textContent = Math.floor(moveHistory.length / 2) + 1;
+            document.getElementById('turn').textContent = moveHistory.length % 2 === 0 ? 'White' : 'Black';
+            
+            // Calculate material
+            let whiteMaterial = 0, blackMaterial = 0;
+            const values = {'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9};
+            
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const piece = board[row][col];
+                    if (!piece || piece.toLowerCase() === 'k') continue;
+                    
+                    const value = values[piece.toLowerCase()];
+                    if (piece === piece.toUpperCase()) {
+                        whiteMaterial += value;
+                    } else {
+                        blackMaterial += value;
+                    }
+                }
+            }
+
+            const diff = whiteMaterial - blackMaterial;
+            if (diff > 0) {
+                document.getElementById('material').textContent = `White +${diff}`;
+            } else if (diff < 0) {
+                document.getElementById('material').textContent = `Black +${Math.abs(diff)}`;
+            } else {
+                document.getElementById('material').textContent = 'Equal';
+            }
+
+            // Update moves list
+            const movesList = document.getElementById('movesList');
+            movesList.innerHTML = '';
+            moveHistory.forEach((m, i) => {
+                const moveItem = document.createElement('div');
+                moveItem.className = 'move-item';
+                const moveNum = Math.floor(i / 2) + 1;
+                const color = i % 2 === 0 ? 'White' : 'Black';
+                moveItem.textContent = `${moveNum}. ${color}: ${m.notation}`;
+                movesList.appendChild(moveItem);
+            });
+            movesList.scrollTop = movesList.scrollHeight;
+        }
+
+        async function stepMove() {
+            if (gameOver) return;
+
+            document.getElementById('aiThinking').style.display = 'block';
+            document.getElementById('stepBtn').disabled = true;
+
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const move = getRandomMove();
+            
+            if (!move) {
+                endGame();
+                return;
+            }
+
+            makeMove(move);
+            renderBoard();
+            updateStats();
+
+            document.getElementById('aiThinking').style.display = 'none';
+            document.getElementById('stepBtn').disabled = false;
+
+            // Check for game over (simplified)
+            if (moveHistory.length >= 80) {
+                endGame();
+            }
+
+            if (autoPlay && !gameOver) {
+                setTimeout(stepMove, 1000);
+            }
+        }
+
+        function startGame() {
+            initBoard();
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stepBtn').disabled = false;
+            document.getElementById('status').textContent = 'Game in progress';
+            document.getElementById('result').style.display = 'none';
+        }
+
+        function toggleAuto() {
+            autoPlay = !autoPlay;
+            document.getElementById('autoBtn').textContent = autoPlay ? '⏸️ Pause' : '🔄 Auto Play';
+            
+            if (autoPlay && !gameOver) {
+                stepMove();
+            }
+        }
+
+        function resetGame() {
+            autoPlay = false;
+            document.getElementById('autoBtn').textContent = '🔄 Auto Play';
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stepBtn').disabled = true;
+            document.getElementById('status').textContent = 'Ready to start';
+            document.getElementById('result').style.display = 'none';
+            initBoard();
+        }
+
+        function endGame() {
+            gameOver = true;
+            autoPlay = false;
+            document.getElementById('stepBtn').disabled = true;
+            document.getElementById('autoBtn').textContent = '🔄 Auto Play';
+            document.getElementById('status').textContent = 'Game Over';
+            
+            const result = moveHistory.length % 2 === 0 ? 'Black wins!' : 'White wins!';
+            document.getElementById('result').textContent = `🏆 ${result}`;
+            document.getElementById('result').style.display = 'block';
+        }
+
+        // Initialize on load
+        initBoard();
+    </script>
+</body>
+</html>

@@ -1,4 +1,3 @@
-# Lichess Bot
 """
 Lichess Bot Integration
 Connects the neural network engine to Lichess.org to play real humans

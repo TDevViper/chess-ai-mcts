@@ -1,4 +1,3 @@
-# Board Encoder
 """
 Chess Board State Encoder
 Converts chess positions into neural network input tensors

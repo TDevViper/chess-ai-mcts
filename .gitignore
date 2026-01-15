@@ -1,19 +1,18 @@
 # Python
-venv/
 __pycache__/
 *.pyc
+*.pyo
 
-# Training outputs
-checkpoints/
-*.pt
-*.log
+# Virtual env
+venv/
+.env/
+
+# Checkpoints (BIG FILES)
+checkpoints/*.pt
+
+# Logs
+logs/
 
 # OS
 .DS_Store
-
-# IDE
-.vscode/
-
-# Data
-data/
-
+Thumbs.db

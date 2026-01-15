@@ -1,4 +1,5 @@
 import os
+import argparse
 import chess
 import torch
 
@@ -8,18 +9,15 @@ from src.engine.chess_uci_engine import SimpleEngine
 # ==================================================
 # CONFIG (EARLY TRAINING)
 # ==================================================
-OLD_MODEL_PATH = "checkpoints/stockfish_bootstrap.pt"
-DEFAULT_NEW_MODEL_PATH = "checkpoints/stockfish_bootstrap.pt"
-
 GAMES = 20
 
-# 🔥 LOWER ARENA STRENGTH (IMPORTANT)
-SIMS = 120          # was 200 → too draw-heavy
+SIMS = 50                # 🔥 weaker arena
 DEVICE = "cpu"
-TEMPERATURE = 0.0
 
-# 🔥 HARD STOP (PREVENT INFINITE GAMES)
-MAX_ARENA_MOVES = 300
+EARLY_TEMP = 0.6          # 🔥 exploration
+LATE_TEMP = 0.05
+
+MAX_ARENA_MOVES = 120     # 🔥 force decisions
 
 # ==================================================
 # LOAD ENGINE
@@ -32,32 +30,48 @@ def load_engine(model_path):
     return MCTS(base, simulations=SIMS)
 
 # ==================================================
-# PLAY ONE ARENA GAME (SAFE + GUARANTEED RETURN)
+# PLAY ONE ARENA GAME
 # ==================================================
 def play_arena_game(engine_new, engine_old):
     board = chess.Board()
 
     # Randomize colors
     new_is_white = bool(torch.randint(0, 2, (1,)).item())
-
     move_count = 0
 
+    # Optional opening diversity
+    if torch.rand(1).item() < 0.3:
+        try:
+            board.push(chess.Move.from_uci("e2e4"))
+        except:
+            pass
+
     while not board.is_game_over() and move_count < MAX_ARENA_MOVES:
+
+        # 🔥 Early exploration
+        temperature = EARLY_TEMP if move_count < 15 else LATE_TEMP
+
+        # Select engine
         if board.turn == chess.WHITE:
             engine = engine_new if new_is_white else engine_old
         else:
             engine = engine_old if new_is_white else engine_new
 
-        move, _, _ = engine.search(board, temperature=TEMPERATURE)
+        # 🔥 Get move + value
+        move, _, value = engine.search(board, temperature=temperature)
 
-        # ---------- SAFETY ----------
+        # 🔥 Arena resign logic (CRITICAL)
+        if value < -0.85:
+            return "old" if new_is_white else "new"
+
+        # Safety
         if move not in board.legal_moves:
             return "draw"
 
         board.push(move)
         move_count += 1
 
-    # ---------- FORCED DRAW ----------
+    # Forced draw
     if not board.is_game_over():
         return "draw"
 
@@ -69,6 +83,7 @@ def play_arena_game(engine_new, engine_old):
         return "old" if new_is_white else "new"
     else:
         return "draw"
+
 
 # ==================================================
 # ARENA EVALUATION
@@ -92,23 +107,23 @@ def arena_eval(new_model_path, old_model_path):
     return results
 
 # ==================================================
-# PROMOTION RULE (EARLY TRAINING)
+# PROMOTION RULE
 # ==================================================
 def should_promote(results):
-    """
-    EARLY PHASE RULE:
-    Promote if new beats old even by 1 game.
-    Tighten later.
-    """
     return results["new"] > results["old"]
 
 # ==================================================
-# MAIN (STANDALONE TEST)
+# MAIN
 # ==================================================
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Arena evaluation")
+    parser.add_argument("--candidate", type=str, required=True)
+    parser.add_argument("--baseline", type=str, required=True)
+    args = parser.parse_args()
+
     results = arena_eval(
-        new_model_path=DEFAULT_NEW_MODEL_PATH,
-        old_model_path=OLD_MODEL_PATH,
+        new_model_path=args.candidate,
+        old_model_path=args.baseline,
     )
 
     if should_promote(results):

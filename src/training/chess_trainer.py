@@ -40,7 +40,7 @@ class ChessTrainer:
     Implements combined policy and value loss with regularization.
     """
     
-    def __init__(self, model, device='cpu', learning_rate=0.001):
+    def __init__(self, model, device='cpu', learning_rate=0.01):
         self.model = model
         self.device = device
         self.model.to(device)

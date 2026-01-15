@@ -2,17 +2,17 @@
 
 import torch
 from src.engine.chess_uci_engine import SimpleEngine
-from src.training.self_play import SelfPlayGenerator
+from  src.training.anti_collapse_self_play import SafeAntiCollapseSelfPlayGenerator
 from src.training.chess_trainer import ChessTrainer
 from src.core.board_encoder import BoardEncoder
 
-DEVICE = "cpu"  # change to "cuda" later
-ITERATIONS = 10
-GAMES_PER_ITER = 5
-EPOCHS = 2
-BATCH_SIZE = 64
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+ITERATIONS = 20
+GAMES_PER_ITER = 40
+EPOCHS = 4
+BATCH_SIZE = 128
 
-model_path = "checkpoints/selfplay_step1.pt"
+model_path = "checkpoints/stockfish_bootstrap.pt"
 
 encoder = BoardEncoder()
 
@@ -23,7 +23,7 @@ for it in range(1, ITERATIONS + 1):
     engine = SimpleEngine(model_path, device=DEVICE)
 
     # Self-play
-    sp = SelfPlayGenerator(engine, encoder)
+    sp = SafeAntiCollapseSelfPlayGenerator(engine, encoder)
     data = sp.generate_games(num_games=GAMES_PER_ITER)
 
     print("Positions:", data["num_positions"])

@@ -7,10 +7,14 @@ from src.engine.mcts import MCTS
 
 
 class SimpleEngine:
-    def __init__(self, model_path: str, device: str = "cpu"):
+    def __init__(self, model_path: str, device: str = "cuda"):
         self.device = device
 
-        checkpoint = torch.load(model_path, map_location=device)
+        checkpoint = torch.load(
+            model_path,
+            map_location=device,
+            weights_only=True
+        )
 
         config = checkpoint.get("model_config", {
             "input_channels": 18,
@@ -28,7 +32,8 @@ class SimpleEngine:
         self.model.eval()
 
         self.encoder = BoardEncoder()
-        print("✅ SimpleEngine loaded successfully")
+        print(f"✅ SimpleEngine loaded on {device.upper()}")
+
 
     # --------------------------------------------------
     # NN INFERENCE
